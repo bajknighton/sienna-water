@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#DDF3FF"/>
+      <stop offset="1" stop-color="#A9DDF7"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6CC8F5"/>
+      <stop offset="1" stop-color="#2E92D6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+
+  <!-- mane -->
+  <g fill="#E98A2E">
+    <circle cx="500" cy="500" r="305"/>
+    <circle cx="500" cy="190" r="112"/>
+    <circle cx="655" cy="232" r="112"/>
+    <circle cx="768" cy="345" r="112"/>
+    <circle cx="810" cy="500" r="112"/>
+    <circle cx="768" cy="655" r="112"/>
+    <circle cx="655" cy="768" r="112"/>
+    <circle cx="500" cy="810" r="112"/>
+    <circle cx="345" cy="768" r="112"/>
+    <circle cx="232" cy="655" r="112"/>
+    <circle cx="190" cy="500" r="112"/>
+    <circle cx="232" cy="345" r="112"/>
+    <circle cx="345" cy="232" r="112"/>
+  </g>
+  <g fill="#D9741E" opacity=".55">
+    <circle cx="500" cy="500" r="262"/>
+  </g>
+
+  <!-- ears -->
+  <circle cx="335" cy="318" r="74" fill="#F7C463"/>
+  <circle cx="665" cy="318" r="74" fill="#F7C463"/>
+  <circle cx="335" cy="318" r="40" fill="#F3A39B"/>
+  <circle cx="665" cy="318" r="40" fill="#F3A39B"/>
+
+  <!-- face -->
+  <ellipse cx="500" cy="522" rx="236" ry="226" fill="#F9CD6E"/>
+
+  <!-- tuft -->
+  <path d="M470 302 C 470 250, 540 240, 548 285 C 552 312, 520 322, 510 302" fill="none" stroke="#E98A2E" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- eyes -->
+  <ellipse cx="418" cy="500" rx="32" ry="40" fill="#3A2618"/>
+  <ellipse cx="582" cy="500" rx="32" ry="40" fill="#3A2618"/>
+  <circle cx="429" cy="486" r="12" fill="#fff"/>
+  <circle cx="593" cy="486" r="12" fill="#fff"/>
+
+  <!-- cheeks -->
+  <ellipse cx="360" cy="590" rx="46" ry="28" fill="#F59393" opacity=".75"/>
+  <ellipse cx="640" cy="590" rx="46" ry="28" fill="#F59393" opacity=".75"/>
+
+  <!-- muzzle -->
+  <ellipse cx="462" cy="612" rx="62" ry="50" fill="#FFE8BE"/>
+  <ellipse cx="538" cy="612" rx="62" ry="50" fill="#FFE8BE"/>
+  <path d="M474 570 Q 500 556 526 570 Q 522 596 500 604 Q 478 596 474 570 Z" fill="#8B4A2B"/>
+  <path d="M500 604 L 500 626 M 500 626 Q 482 648 462 636 M 500 626 Q 518 648 538 636" fill="none" stroke="#8B4A2B" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- water drop badge -->
+  <g transform="translate(780 770)">
+    <circle r="150" fill="#fff"/>
+    <path d="M0 -112 C 30 -66, 84 -6, 84 40 C 84 88, 46 120, 0 120 C -46 120, -84 88, -84 40 C -84 -6, -30 -66, 0 -112 Z" fill="url(#drop)"/>
+    <path d="M-40 34 C -40 6, -24 -18, -8 -36" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" opacity=".85"/>
+    <circle cx="-42" cy="64" r="9" fill="#fff" opacity=".85"/>
+  </g>
+</svg>

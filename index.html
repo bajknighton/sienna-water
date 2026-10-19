@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sienna's Water</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sienna's Water">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#FFF6E8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1D1611" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" href="/icons/icon-192.png">
+  <style>
+    :root {
+      --bg: #FFF6E8; --card: #FFFFFF; --ink: #3A2618; --muted: #8C7663; --line: #F0E2CC;
+      --lion: #E98A2E; --lion-soft: #FCE6C6; --water: #2E92D6; --water-soft: #DDF1FC;
+      --good: #3E9A5C; --good-soft: #E1F4E6; --shadow: 0 6px 20px rgba(120, 72, 20, .10);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1D1611; --card: #2A2019; --ink: #F8ECDD; --muted: #B8A28C; --line: #3A2D22;
+        --lion: #F29B44; --lion-soft: #3E2B19; --water: #5BB7F0; --water-soft: #16303F;
+        --good: #6FCB8B; --good-soft: #1C3324; --shadow: 0 6px 20px rgba(0, 0, 0, .35);
+      }
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); }
+    body {
+      font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 17px; line-height: 1.4;
+      padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 28px);
+      max-width: 560px; margin: 0 auto; min-height: 100vh;
+    }
+    h1, h2, h3 { margin: 0; line-height: 1.15; }
+    h1 { font-size: 30px; font-weight: 800; letter-spacing: -.01em; }
+    h2 { font-size: 20px; font-weight: 750; }
+    p { margin: 0; }
+    .muted { color: var(--muted); }
+    .small { font-size: 14px; }
+    .hidden { display: none !important; }
+    .stack > * + * { margin-top: 12px; }
+
+    .card { background: var(--card); border-radius: 22px; padding: 18px; box-shadow: var(--shadow); }
+    button, .btn {
+      font: inherit; font-weight: 700; border: 0; border-radius: 16px; padding: 14px 18px;
+      background: var(--lion); color: #fff; width: 100%; cursor: pointer;
+      transition: transform .08s ease, opacity .2s;
+    }
+    button:active { transform: scale(.97); }
+    button:disabled { opacity: .5; }
+    button.ghost { background: transparent; color: var(--lion); padding: 10px; width: auto; }
+    button.soft { background: var(--lion-soft); color: var(--ink); }
+    button.water { background: var(--water); }
+    input, select {
+      font: inherit; color: var(--ink); background: var(--bg); border: 2px solid var(--line);
+      border-radius: 14px; padding: 12px 14px; width: 100%; -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--lion); }
+    label { display: block; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+
+    /* hero */
+    .hero { display: flex; align-items: center; gap: 14px; margin: 6px 0 18px; }
+    .hero img { width: 64px; height: 64px; border-radius: 16px; box-shadow: var(--shadow); }
+    .hero .sub { color: var(--muted); font-size: 15px; margin-top: 2px; }
+    .center-hero { text-align: center; padding: 24px 6px 8px; }
+    .center-hero img { width: 120px; height: 120px; border-radius: 30px; box-shadow: var(--shadow); }
+    .center-hero h1 { margin-top: 16px; }
+    .center-hero p { margin-top: 8px; color: var(--muted); }
+
+    /* drops progress */
+    .drops { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 55%; }
+    .drop { width: 22px; height: 28px; }
+    .progress h2 { white-space: nowrap; }
+    .drop path { fill: var(--water-soft); stroke: var(--water); stroke-width: 2; transition: fill .3s; }
+    .drop.full path { fill: var(--water); }
+    .progress { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+    /* slots */
+    .slot { display: flex; align-items: center; gap: 14px; }
+    .slot .time { font-size: 22px; font-weight: 800; min-width: 74px; }
+    .slot .info { flex: 1; min-width: 0; }
+    .slot .state { font-size: 14px; color: var(--muted); }
+    .slot.is-due { border: 2px solid var(--water); }
+    .slot.is-done { background: var(--good-soft); box-shadow: none; }
+    .slot.is-done .state { color: var(--good); font-weight: 700; }
+    .slot.is-missed .time { color: var(--muted); }
+    .slot .mini { width: auto; padding: 9px 14px; font-size: 15px; border-radius: 12px; }
+    .tick { width: 34px; height: 34px; border-radius: 50%; background: var(--good); color: #fff;
+            display: grid; place-items: center; font-weight: 900; flex: none; }
+
+    .due {
+      background: linear-gradient(160deg, var(--water-soft), var(--card));
+      border: 3px solid var(--water); text-align: center; padding: 22px 18px;
+      animation: glow 1.8s ease-in-out infinite;
+    }
+    .due .big { font-size: 46px; font-weight: 850; color: var(--water); line-height: 1; }
+    .due .who { margin: 8px 0 16px; font-size: 18px; font-weight: 700; }
+    .due img { width: 88px; height: 88px; border-radius: 22px; animation: wiggle 2.4s ease-in-out infinite; }
+    .due button { font-size: 20px; padding: 18px; }
+    @keyframes glow { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--water) 18%, transparent); } }
+    @keyframes wiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-8deg); } 20% { transform: rotate(8deg); } 30% { transform: rotate(0); } }
+    @media (prefers-reduced-motion: reduce) { .due, .due img { animation: none; } }
+
+    /* week */
+    .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+    .week .bar { height: 54px; border-radius: 10px; background: var(--water-soft); position: relative; overflow: hidden; }
+    .week .fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--water); border-radius: 10px 10px 0 0; }
+    .week .d { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* settings */
+    .section-title { display: flex; justify-content: space-between; align-items: center; margin: 26px 4px 10px; }
+    .timerow { display: flex; gap: 10px; align-items: center; }
+    .timerow input { flex: 1; }
+    .x { width: 46px; height: 46px; padding: 0; border-radius: 14px; background: var(--lion-soft); color: var(--ink); font-size: 22px; flex: none; }
+    .toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .switch { position: relative; width: 54px; height: 32px; flex: none; }
+    .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 99px; transition: .2s; }
+    .switch span::after { content: ""; position: absolute; width: 26px; height: 26px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+    .switch input:checked + span { background: var(--good); }
+    .switch input:checked + span::after { transform: translateX(22px); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .device { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .device:last-child { border-bottom: 0; }
+
+    .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+    .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
+    .steps li::before { content: counter(s); flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lion); color: #fff; font-weight: 800; display: grid; place-items: center; }
+    .share-ico { display: inline-block; vertical-align: -4px; width: 20px; height: 20px; }
+
+    .banner { background: var(--lion-soft); border-radius: 18px; padding: 14px 16px; }
+    .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translate(-50%, 120px);
+             background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 700;
+             transition: transform .3s ease, visibility .3s; z-index: 10; visibility: hidden; max-width: calc(100% - 32px); text-align: center; }
+    .toast.show { transform: translate(-50%, 0); visibility: visible; }
+    .err { color: #D0453A; font-size: 15px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Install on Home Screen -->
+  <section id="v-install" class="hidden">
+    <div class="center-hero">
+      <img src="/icons/icon-192.png" alt="">
+      <h1>Sienna's Water</h1>
+      <p>Add this to your Home Screen so it can send you reminders.</p>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <ol class="steps">
+        <li><span>Tap the <b>Share</b> button
+          <svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+          in Safari (bottom or top bar)</span></li>
+        <li><span>Scroll down and tap <b>Add to Home Screen</b></span></li>
+        <li><span>Tap <b>Add</b>, then open <b>Sienna's Water</b> from your Home Screen</span></li>
+      </ol>
+    </div>
+    <p class="muted small" style="text-align:center;margin-top:16px">Notifications only work from the Home Screen app on iPhone (iOS 16.4 or later).</p>
+    <div style="text-align:center;margin-top:8px"><button class="ghost" id="skipInstall">Just look around in the browser</button></div>
+  </section>
+
+  <!-- 2. Family code + name -->
+  <section id="v-setup" class="hidden">
+    <div class="center-hero">
+      <img src="/icons/icon-192.png" alt="">
+      <h1 id="setupTitle">Welcome!</h1>
+      <p id="setupLead">Let's get this phone set up.</p>
+    </div>
+    <form id="setupForm" class="card stack" style="margin-top:18px">
+      <div>
+        <label for="codeIn" id="codeLabel">Family code</label>
+        <input id="codeIn" autocomplete="off" autocapitalize="none" placeholder="e.g. little-lion">
+        <p class="muted small" style="margin-top:6px" id="codeHint"></p>
+      </div>
+      <div>
+        <label for="nameIn">Your name</label>
+        <input id="nameIn" autocomplete="given-name" placeholder="e.g. Mum or Dad">
+        <p class="muted small" style="margin-top:6px">Shown when you tick off a reminder.</p>
+      </div>
+      <p class="err hidden" id="setupErr"></p>
+      <button type="submit">Continue</button>
+    </form>
+  </section>
+
+  <!-- 3. Main -->
+  <section id="v-main" class="hidden">
+    <header class="hero">
+      <img src="/icons/icon-192.png" alt="">
+      <div>
+        <h1><span class="baby">Sienna</span>'s water</h1>
+        <p class="sub" id="todayLabel"></p>
+      </div>
+    </header>
+
+    <div id="notifCard" class="card stack hidden" style="margin-bottom:14px">
+      <h2>🔔 Turn on reminders</h2>
+      <p class="muted" id="notifText">Allow notifications so this phone gets <span class="baby">Sienna</span>'s water alerts.</p>
+      <button id="enableBtn" class="water">Turn on reminders</button>
+    </div>
+
+    <div id="pausedBanner" class="banner hidden" style="margin-bottom:14px">
+      <b>Reminders are paused.</b> <span class="muted">Turn them back on in Settings below.</span>
+    </div>
+
+    <div id="dueArea" class="stack"></div>
+
+    <div class="card progress" style="margin-top:14px">
+      <div>
+        <h2 id="progressText">0 of 4 today</h2>
+        <p class="muted small" id="nextText"></p>
+      </div>
+      <div class="drops" id="drops"></div>
+    </div>
+
+    <div class="section-title"><h2>Today</h2></div>
+    <div id="slots" class="stack"></div>
+
+    <div class="section-title"><h2>This week</h2></div>
+    <div class="card"><div class="week" id="week"></div></div>
+
+    <div class="section-title"><h2>Settings</h2></div>
+    <form id="settingsForm" class="card stack">
+      <div>
+        <label for="babyIn">Baby's name</label>
+        <input id="babyIn" maxlength="30">
+      </div>
+      <div>
+        <label>Reminder times</label>
+        <div id="timeRows" class="stack"></div>
+        <button type="button" class="soft" id="addTime" style="margin-top:10px">+ Add a time</button>
+      </div>
+      <div class="row2">
+        <div>
+          <label for="nagIn">Repeat every</label>
+          <select id="nagIn">
+            <option value="0">Don't repeat</option>
+            <option value="5">5 min</option>
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="20">20 min</option>
+            <option value="30">30 min</option>
+          </select>
+        </div>
+        <div>
+          <label for="maxIn">Up to</label>
+          <select id="maxIn">
+            <option value="1">1 more time</option>
+            <option value="2">2 more times</option>
+            <option value="3">3 more times</option>
+            <option value="4">4 more times</option>
+            <option value="6">6 more times</option>
+            <option value="8">8 more times</option>
+          </select>
+        </div>
+      </div>
+      <p class="muted small" style="margin-top:4px">Reminders keep coming until one of you taps Done.</p>
+      <div class="toggle">
+        <div><b>Tell the other phone when it's done</b></div>
+        <label class="switch"><input type="checkbox" id="notifyDoneIn"><span></span></label>
+      </div>
+      <div class="toggle">
+        <div><b>Pause all reminders</b><br><span class="muted small">Handy for holidays or sick days</span></div>
+        <label class="switch"><input type="checkbox" id="pausedIn"><span></span></label>
+      </div>
+      <button type="submit" id="saveBtn">Save settings</button>
+    </form>
+
+    <div class="section-title"><h2>Phones getting reminders</h2></div>
+    <div class="card">
+      <div id="devices"></div>
+      <div class="row2" style="margin-top:12px">
+        <button class="soft" id="testBtn">Send me a test</button>
+        <button class="soft" id="offBtn">Turn off here</button>
+      </div>
+    </div>
+    <p class="muted small" style="text-align:center;margin-top:18px">
+      Family code saved on this phone · <button class="ghost small" id="signOut" style="font-size:14px">Change</button>
+    </p>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
