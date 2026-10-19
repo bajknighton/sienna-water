@@ -1,0 +1,11 @@
+{
+  "name": "sienna-water",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Water reminders for Sienna – iPhone home-screen app with push notifications",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "web-push": "^3.6.7"
+  }
+}
