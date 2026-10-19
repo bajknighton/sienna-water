@@ -1,5 +1,7 @@
 [build]
-  publish = "public"
+  # Files were uploaded without folders, so sort them into place during the build.
+  command = "mkdir -p dist/icons netlify/functions netlify/lib && cp index.html app.js sw.js manifest.webmanifest dist/ && cp *.png lion.svg dist/icons/ && cp api.mjs tick.mjs netlify/functions/ && cp core.mjs schedule.mjs netlify/lib/"
+  publish = "dist"
   functions = "netlify/functions"
 
 [functions]
@@ -10,8 +12,3 @@
   [headers.values]
     Cache-Control = "no-cache"
     Service-Worker-Allowed = "/"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
