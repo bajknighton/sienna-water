@@ -179,8 +179,16 @@ function render() {
     return `<div><div class="bar"><div class="fill" style="height:${pct}%"></div></div><div class="d">${d} · ${w.done}</div></div>`;
   }).join('');
 
+  // schedule switch
+  document.querySelectorAll('#schedSwitch button').forEach((b) => {
+    const on = b.dataset.sched === settings.active;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on);
+  });
+  $('#schedTimes').textContent = settings.times.map(pretty).join(' · ');
+
   // settings (don't overwrite while the user is editing)
-  if (!$('#settingsForm').contains(document.activeElement)) fillSettings();
+  if (!formDirty && !$('#settingsForm').contains(document.activeElement)) fillSettings();
 
   // devices
   const mine = LS.get('deviceId');
@@ -224,15 +232,51 @@ function timeRow(value = '') {
   row.querySelector('.x').onclick = () => row.remove();
   return row;
 }
+// Times being edited for each schedule (kept until Save).
+let draft = { 1: [], 2: [] };
+let editing = '1';
+let formDirty = false;
+
+const rowTimes = () => [...$('#timeRows').querySelectorAll('input')].map((i) => i.value).filter(Boolean);
+function showEditTab(k) {
+  editing = k;
+  document.querySelectorAll('#editSwitch button').forEach((b) => b.classList.toggle('on', b.dataset.edit === k));
+  $('#timeRows').replaceChildren(...draft[k].map((t) => timeRow(t)));
+  $('#editNote').textContent = k === state.settings.active
+    ? `Schedule ${k} is the one in use today.`
+    : `Editing Schedule ${k} – switch to it at the top when you need it.`;
+}
 function fillSettings() {
   const s = state.settings;
   $('#babyIn').value = s.babyName;
-  $('#timeRows').replaceChildren(...s.times.map((t) => timeRow(t)));
+  draft = { 1: [...s.schedules['1']], 2: [...s.schedules['2']] };
+  showEditTab(formDirty ? editing : s.active);
   $('#nagIn').value = String(s.nagMinutes);
   $('#maxIn').value = String(s.maxNags);
   $('#notifyDoneIn').checked = s.notifyOnDone;
   $('#pausedIn').checked = s.paused;
+  formDirty = false;
 }
+document.querySelectorAll('#editSwitch button').forEach((b) => (b.onclick = () => {
+  draft[editing] = rowTimes();
+  showEditTab(b.dataset.edit);
+}));
+$('#settingsForm').addEventListener('input', () => (formDirty = true));
+$('#settingsForm').addEventListener('click', (e) => { if (e.target.closest('.x, #addTime, #editSwitch')) formDirty = true; });
+
+// The big switch at the top
+document.querySelectorAll('#schedSwitch button').forEach((b) => (b.onclick = async () => {
+  const k = b.dataset.sched;
+  if (!state || k === state.settings.active) return;
+  document.querySelectorAll('#schedSwitch button').forEach((x) => x.classList.toggle('on', x === b));
+  try {
+    await api('settings', { method: 'PUT', body: { active: k, by: LS.get('name'), deviceId: LS.get('deviceId') } });
+    toast(`📅 Switched to Schedule ${k} on both phones`);
+    if (navigator.vibrate) navigator.vibrate(20);
+  } catch (x) { toast(x.message); }
+  await refresh();
+}));
+
 $('#addTime').onclick = () => {
   const r = timeRow('12:00');
   $('#timeRows').append(r);
@@ -240,14 +284,14 @@ $('#addTime').onclick = () => {
 };
 $('#settingsForm').onsubmit = async (e) => {
   e.preventDefault();
-  const times = [...$('#timeRows').querySelectorAll('input')].map((i) => i.value).filter(Boolean);
+  draft[editing] = rowTimes();
   $('#saveBtn').disabled = true;
   try {
     await api('settings', {
       method: 'PUT',
       body: {
         babyName: $('#babyIn').value,
-        times,
+        schedules: draft,
         nagMinutes: Number($('#nagIn').value),
         maxNags: Number($('#maxIn').value),
         notifyOnDone: $('#notifyDoneIn').checked,
@@ -256,6 +300,7 @@ $('#settingsForm').onsubmit = async (e) => {
     });
     document.activeElement?.blur();
     toast('Saved – both phones will use these times');
+    formDirty = false;
     await refresh();
     fillSettings();
   } catch (x) { toast(x.message); }

@@ -126,6 +126,11 @@
     .device { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
     .device:last-child { border-bottom: 0; }
 
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--lion-soft); padding: 4px; border-radius: 16px; }
+    .seg button { background: transparent; color: var(--ink); padding: 12px 8px; border-radius: 12px; font-size: 17px; }
+    .seg button.on { background: var(--lion); color: #fff; box-shadow: 0 2px 6px rgba(120, 72, 20, .25); }
+    .small-seg button { padding: 9px 8px; font-size: 15px; }
+    .small-seg button.on { background: var(--card); color: var(--ink); }
     .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
     .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
     .steps li::before { content: counter(s); flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lion); color: #fff; font-weight: 800; display: grid; place-items: center; }
@@ -194,6 +199,17 @@
       </div>
     </header>
 
+    <div class="card" style="margin-bottom:14px">
+      <div class="toggle" style="margin-bottom:10px">
+        <b>Today's schedule</b>
+        <span class="muted small" id="schedTimes"></span>
+      </div>
+      <div class="seg" id="schedSwitch" role="radiogroup" aria-label="Today's schedule">
+        <button type="button" data-sched="1" role="radio">Schedule 1</button>
+        <button type="button" data-sched="2" role="radio">Schedule 2</button>
+      </div>
+    </div>
+
     <div id="notifCard" class="card stack hidden" style="margin-bottom:14px">
       <h2>🔔 Turn on reminders</h2>
       <p class="muted" id="notifText">Allow notifications so this phone gets <span class="baby">Sienna</span>'s water alerts.</p>
@@ -228,6 +244,11 @@
       </div>
       <div>
         <label>Reminder times</label>
+        <div class="seg small-seg" id="editSwitch" style="margin-bottom:10px">
+          <button type="button" data-edit="1">Schedule 1</button>
+          <button type="button" data-edit="2">Schedule 2</button>
+        </div>
+        <p class="muted small" id="editNote" style="margin-bottom:10px"></p>
         <div id="timeRows" class="stack"></div>
         <button type="button" class="soft" id="addTime" style="margin-top:10px">+ Add a time</button>
       </div>
