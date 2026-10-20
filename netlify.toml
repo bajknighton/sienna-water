@@ -1,6 +1,6 @@
 [build]
-  # Files were uploaded without folders, so sort them into place during the build.
-  command = "mkdir -p dist/icons netlify/functions netlify/lib && cp index.html app.js sw.js manifest.webmanifest dist/ && cp *.png lion.svg dist/icons/ && cp api.mjs tick.mjs netlify/functions/ && cp core.mjs schedule.mjs netlify/lib/"
+  # Files were uploaded without folders (and iPhone may rename .mjs to .js), so sort them out during the build.
+  command = "mkdir -p dist/icons netlify/functions netlify/lib && for f in api tick core schedule; do if [ -f $f.js ]; then cp $f.js $f.mjs; fi; done && cp index.html app.js sw.js manifest.webmanifest dist/ && cp *.png lion.svg dist/icons/ && cp api.mjs tick.mjs netlify/functions/ && cp core.mjs schedule.mjs netlify/lib/"
   publish = "dist"
   functions = "netlify/functions"
 
