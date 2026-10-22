@@ -131,13 +131,47 @@
     .seg button.on { background: var(--lion); color: #fff; box-shadow: 0 2px 6px rgba(120, 72, 20, .25); }
     .small-seg button { padding: 9px 8px; font-size: 15px; }
     .small-seg button.on { background: var(--card); color: var(--ink); }
+
+    /* tabs */
+    body.has-tabs { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
+    .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(3, 1fr);
+              background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+              border-top: 1px solid var(--line); padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px); }
+    .tabbar button { background: transparent; color: var(--muted); padding: 6px 4px; font-size: 12px; font-weight: 700; border-radius: 12px; position: relative; }
+    .tabbar button .ti { display: block; font-size: 22px; line-height: 1.2; filter: grayscale(1); opacity: .6; }
+    .tabbar button.on { color: var(--lion); }
+    .tabbar button.on .ti { filter: none; opacity: 1; }
+    .tabbar .dot { position: absolute; top: 4px; left: calc(50% + 10px); width: 10px; height: 10px; border-radius: 50%; background: #E5484D; }
+    .savebar { position: sticky; bottom: calc(env(safe-area-inset-bottom) + 76px); z-index: 2; }
+    .savebar button { box-shadow: 0 8px 20px rgba(120, 72, 20, .25); }
+
+    /* allergens */
+    .weeknav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .navbtn { width: 44px; height: 44px; padding: 0; border-radius: 14px; background: var(--lion-soft); color: var(--ink); font-size: 26px; line-height: 1; flex: none; }
+    .ameter { height: 10px; border-radius: 99px; background: var(--good-soft); margin: 14px 0 6px; overflow: hidden; }
+    .ameter div { height: 100%; background: var(--good); border-radius: 99px; transition: width .3s; }
+    .atable { margin-top: 8px; }
+    .arow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .arow:last-child { border-bottom: 0; }
+    .aname { flex: 1; min-width: 0; font-weight: 700; }
+    .aname .cnt { display: block; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .arow.met .aname .cnt { color: var(--good); }
+    .boxes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 62%; }
+    .box { width: 44px; height: 44px; padding: 0; border-radius: 12px; background: transparent; border: 2px dashed var(--line);
+           color: var(--muted); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+    .box.on { background: var(--good); border: 2px solid var(--good); color: #fff; }
+    .box.on.today { box-shadow: 0 0 0 3px color-mix(in srgb, var(--water) 55%, transparent); }
+    .box.more { width: 34px; border-style: dotted; font-size: 20px; }
+    .box .ck { font-size: 16px; line-height: 1; }
+    .due-soft { border: 2px solid var(--lion); background: linear-gradient(160deg, var(--lion-soft), var(--card)); }
+    .xrow input { flex: 1; }
     .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
     .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
     .steps li::before { content: counter(s); flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lion); color: #fff; font-weight: 800; display: grid; place-items: center; }
     .share-ico { display: inline-block; vertical-align: -4px; width: 20px; height: 20px; }
 
     .banner { background: var(--lion-soft); border-radius: 18px; padding: 14px 16px; }
-    .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translate(-50%, 120px);
+    .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); transform: translate(-50%, 120px);
              background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 700;
              transition: transform .3s ease, visibility .3s; z-index: 10; visibility: hidden; max-width: calc(100% - 32px); text-align: center; }
     .toast.show { transform: translate(-50%, 0); visibility: visible; }
@@ -194,111 +228,195 @@
     <header class="hero">
       <img src="/icons/icon-192.png" alt="">
       <div>
-        <h1><span class="baby">Sienna</span>'s water</h1>
+        <h1 id="heroTitle"><span class="baby">Sienna</span>'s day</h1>
         <p class="sub" id="todayLabel"></p>
       </div>
     </header>
 
-    <div class="card" style="margin-bottom:14px">
-      <div class="toggle" style="margin-bottom:10px">
-        <b>Today's schedule</b>
-        <span class="muted small" id="schedTimes"></span>
-      </div>
-      <div class="seg" id="schedSwitch" role="radiogroup" aria-label="Today's schedule">
-        <button type="button" data-sched="1" role="radio">Schedule 1</button>
-        <button type="button" data-sched="2" role="radio">Schedule 2</button>
-      </div>
-    </div>
-
     <div id="notifCard" class="card stack hidden" style="margin-bottom:14px">
       <h2>🔔 Turn on reminders</h2>
-      <p class="muted" id="notifText">Allow notifications so this phone gets <span class="baby">Sienna</span>'s water alerts.</p>
+      <p class="muted" id="notifText">Allow notifications so this phone gets <span class="baby">Sienna</span>'s reminders.</p>
       <button id="enableBtn" class="water">Turn on reminders</button>
     </div>
 
     <div id="pausedBanner" class="banner hidden" style="margin-bottom:14px">
-      <b>Reminders are paused.</b> <span class="muted">Turn them back on in Settings below.</span>
+      <b>Reminders are paused.</b> <span class="muted">Turn them back on in Settings.</span>
     </div>
 
-    <div id="dueArea" class="stack"></div>
-
-    <div class="card progress" style="margin-top:14px">
-      <div>
-        <h2 id="progressText">0 of 4 today</h2>
-        <p class="muted small" id="nextText"></p>
-      </div>
-      <div class="drops" id="drops"></div>
-    </div>
-
-    <div class="section-title"><h2>Today</h2></div>
-    <div id="slots" class="stack"></div>
-
-    <div class="section-title"><h2>This week</h2></div>
-    <div class="card"><div class="week" id="week"></div></div>
-
-    <div class="section-title"><h2>Settings</h2></div>
-    <form id="settingsForm" class="card stack">
-      <div>
-        <label for="babyIn">Baby's name</label>
-        <input id="babyIn" maxlength="30">
-      </div>
-      <div>
-        <label>Reminder times</label>
-        <div class="seg small-seg" id="editSwitch" style="margin-bottom:10px">
-          <button type="button" data-edit="1">Schedule 1</button>
-          <button type="button" data-edit="2">Schedule 2</button>
+    <!-- TODAY -->
+    <div class="tab-panel" id="tab-today">
+      <div class="card" style="margin-bottom:14px">
+        <div class="toggle" style="margin-bottom:10px">
+          <b>Water schedule</b>
+          <span class="muted small" id="schedTimes"></span>
         </div>
-        <p class="muted small" id="editNote" style="margin-bottom:10px"></p>
-        <div id="timeRows" class="stack"></div>
-        <button type="button" class="soft" id="addTime" style="margin-top:10px">+ Add a time</button>
+        <div class="seg" id="schedSwitch" role="radiogroup" aria-label="Today's water schedule">
+          <button type="button" data-sched="1" role="radio">Schedule 1</button>
+          <button type="button" data-sched="2" role="radio">Schedule 2</button>
+        </div>
       </div>
-      <div class="row2">
+
+      <div id="dueArea" class="stack"></div>
+
+      <div class="card progress" style="margin-top:14px">
         <div>
-          <label for="nagIn">Repeat every</label>
-          <select id="nagIn">
-            <option value="0">Don't repeat</option>
-            <option value="5">5 min</option>
-            <option value="10">10 min</option>
-            <option value="15">15 min</option>
-            <option value="20">20 min</option>
-            <option value="30">30 min</option>
-          </select>
+          <h2 id="progressText">0 of 4 today</h2>
+          <p class="muted small" id="nextText"></p>
         </div>
-        <div>
-          <label for="maxIn">Up to</label>
-          <select id="maxIn">
-            <option value="1">1 more time</option>
-            <option value="2">2 more times</option>
-            <option value="3">3 more times</option>
-            <option value="4">4 more times</option>
-            <option value="6">6 more times</option>
-            <option value="8">8 more times</option>
-          </select>
-        </div>
+        <div class="drops" id="drops"></div>
       </div>
-      <p class="muted small" style="margin-top:4px">Reminders keep coming until one of you taps Done.</p>
-      <div class="toggle">
-        <div><b>Tell the other phone when it's done</b></div>
-        <label class="switch"><input type="checkbox" id="notifyDoneIn"><span></span></label>
-      </div>
-      <div class="toggle">
-        <div><b>Pause all reminders</b><br><span class="muted small">Handy for holidays or sick days</span></div>
-        <label class="switch"><input type="checkbox" id="pausedIn"><span></span></label>
-      </div>
-      <button type="submit" id="saveBtn">Save settings</button>
-    </form>
 
-    <div class="section-title"><h2>Phones getting reminders</h2></div>
-    <div class="card">
-      <div id="devices"></div>
-      <div class="row2" style="margin-top:12px">
-        <button class="soft" id="testBtn">Send me a test</button>
-        <button class="soft" id="offBtn">Turn off here</button>
+      <div class="section-title"><h2>💧 Water</h2></div>
+      <div id="slots" class="stack"></div>
+
+      <div id="extrasWrap">
+        <div class="section-title"><h2>Daily extras</h2></div>
+        <div id="extras" class="stack"></div>
       </div>
+
+      <div class="section-title"><h2>Water this week</h2></div>
+      <div class="card"><div class="week" id="week"></div></div>
     </div>
-    <p class="muted small" style="text-align:center;margin-top:18px">
-      Family code saved on this phone · <button class="ghost small" id="signOut" style="font-size:14px">Change</button>
-    </p>
+
+    <!-- ALLERGENS -->
+    <div class="tab-panel hidden" id="tab-allergens">
+      <div id="allgBanner" class="card due-soft hidden" style="margin-bottom:14px"></div>
+      <div class="card">
+        <div class="weeknav">
+          <button type="button" class="navbtn" id="weekPrev" aria-label="Previous week">‹</button>
+          <div style="text-align:center">
+            <b id="weekLabel">This week</b>
+            <div class="muted small" id="weekSub"></div>
+          </div>
+          <button type="button" class="navbtn" id="weekNext" aria-label="Next week">›</button>
+        </div>
+        <div class="ameter"><div id="ameterFill"></div></div>
+        <div id="allgTable" class="atable"></div>
+      </div>
+      <p class="muted small" style="text-align:center;margin:14px 8px 0">
+        Tap an empty box each time <span class="baby">Sienna</span> has that allergen. Tap a ticked box to remove it.
+        Weeks run Monday to Sunday.
+      </p>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tab-panel hidden" id="tab-settings">
+      <form id="settingsForm" class="stack">
+        <div class="card stack">
+          <div>
+            <label for="babyIn">Baby's name</label>
+            <input id="babyIn" maxlength="30">
+          </div>
+        </div>
+
+        <div class="card stack">
+          <h2>💧 Water reminder times</h2>
+          <div class="seg small-seg" id="editSwitch">
+            <button type="button" data-edit="1">Schedule 1</button>
+            <button type="button" data-edit="2">Schedule 2</button>
+          </div>
+          <p class="muted small" id="editNote"></p>
+          <div id="timeRows" class="stack"></div>
+          <button type="button" class="soft" id="addTime">+ Add a time</button>
+        </div>
+
+        <div class="card stack">
+          <div class="toggle">
+            <h2>💊 Vitamins</h2>
+            <label class="switch"><input type="checkbox" id="vitOn"><span></span></label>
+          </div>
+          <div>
+            <label for="vitTime">Daily reminder at</label>
+            <input type="time" id="vitTime">
+          </div>
+        </div>
+
+        <div class="card stack">
+          <h2>🥚 Allergens</h2>
+          <div class="toggle">
+            <div><b>Evening check reminder</b><br><span class="muted small">"Have today's allergens been ticked off?"</span></div>
+            <label class="switch"><input type="checkbox" id="allgOn"><span></span></label>
+          </div>
+          <div>
+            <label for="allgTime">Remind at</label>
+            <input type="time" id="allgTime">
+          </div>
+          <div>
+            <label for="targetIn">Aim for each allergen</label>
+            <select id="targetIn">
+              <option value="1">1 time a week</option>
+              <option value="2">2 times a week</option>
+              <option value="3">3 times a week</option>
+              <option value="4">4 times a week</option>
+              <option value="5">5 times a week</option>
+              <option value="7">Every day</option>
+            </select>
+          </div>
+          <div>
+            <label>Allergens to track</label>
+            <div id="allgRows" class="stack"></div>
+            <button type="button" class="soft" id="addAllg" style="margin-top:10px">+ Add an allergen</button>
+            <p class="muted small" style="margin-top:6px">Renaming an allergen starts its ticks afresh.</p>
+          </div>
+        </div>
+
+        <div class="card stack">
+          <h2>🔔 Reminder behaviour</h2>
+          <div class="row2">
+            <div>
+              <label for="nagIn">Repeat every</label>
+              <select id="nagIn">
+                <option value="0">Don't repeat</option>
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
+                <option value="30">30 min</option>
+              </select>
+            </div>
+            <div>
+              <label for="maxIn">Up to</label>
+              <select id="maxIn">
+                <option value="1">1 more time</option>
+                <option value="2">2 more times</option>
+                <option value="3">3 more times</option>
+                <option value="4">4 more times</option>
+                <option value="6">6 more times</option>
+                <option value="8">8 more times</option>
+              </select>
+            </div>
+          </div>
+          <p class="muted small">Reminders keep coming until one of you taps Done.</p>
+          <div class="toggle">
+            <div><b>Tell the other phone when it's done</b></div>
+            <label class="switch"><input type="checkbox" id="notifyDoneIn"><span></span></label>
+          </div>
+          <div class="toggle">
+            <div><b>Pause all reminders</b><br><span class="muted small">Handy for holidays or sick days</span></div>
+            <label class="switch"><input type="checkbox" id="pausedIn"><span></span></label>
+          </div>
+        </div>
+        <div class="savebar"><button type="submit" id="saveBtn">Save settings</button></div>
+      </form>
+
+      <div class="section-title"><h2>Phones getting reminders</h2></div>
+      <div class="card">
+        <div id="devices"></div>
+        <div class="row2" style="margin-top:12px">
+          <button class="soft" id="testBtn">Send me a test</button>
+          <button class="soft" id="offBtn">Turn off here</button>
+        </div>
+      </div>
+      <p class="muted small" style="text-align:center;margin-top:18px">
+        Family code saved on this phone · <button class="ghost small" id="signOut" style="font-size:14px">Change</button>
+      </p>
+    </div>
+
+    <nav class="tabbar" id="tabbar">
+      <button type="button" data-tab="today"><span class="ti">💧</span>Today</button>
+      <button type="button" data-tab="allergens"><span class="ti">🥚</span>Allergens<i class="dot hidden" id="allgDot"></i></button>
+      <button type="button" data-tab="settings"><span class="ti">⚙️</span>Settings</button>
+    </nav>
   </section>
 
   <div class="toast" id="toast"></div>

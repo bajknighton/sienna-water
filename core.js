@@ -10,6 +10,10 @@ export const DEFAULT_SETTINGS = {
   maxNags: 3, // how many repeats after the first alert
   notifyOnDone: true, // tell the other phone when it's been done
   paused: false,
+  vitamins: { on: true, time: '09:00' },
+  allergenCheck: { on: true, time: '19:00' }, // evening "have we ticked today's allergens?" reminder
+  allergens: ['Egg', 'Peanut', 'Milk', 'Wheat', 'Soya', 'Sesame', 'Fish', 'Tree nuts', 'Shellfish'],
+  allergenTarget: 3, // exposures per allergen per week
 };
 
 export const store = () => getStore({ name: 'sienna-water', consistency: 'strong' });
@@ -37,6 +41,9 @@ export function normalise(saved) {
   for (const k of SCHEDULES) if (!Array.isArray(s.schedules[k])) s.schedules[k] = [];
   s.active = SCHEDULES.includes(String(s.active)) ? String(s.active) : '1';
   s.times = s.schedules[s.active];
+  s.vitamins = { ...DEFAULT_SETTINGS.vitamins, ...(saved?.vitamins || {}) };
+  s.allergenCheck = { ...DEFAULT_SETTINGS.allergenCheck, ...(saved?.allergenCheck || {}) };
+  if (!Array.isArray(s.allergens)) s.allergens = [...DEFAULT_SETTINGS.allergens];
   return s;
 }
 
@@ -52,7 +59,21 @@ export async function listSubs(s = store()) {
   return subs.filter((x) => x.subscription);
 }
 
-export const subId = (endpoint) => hash(endpoint).slice(0, 16);
+/** Allergen ticks for one week: { name: [{ date, by, at }, ...] } */
+export async function allergenWeek(settings, week, s = store()) {
+  const { slug } = await import('./schedule.mjs');
+  const rows = await Promise.all(
+    settings.allergens.map(async (name) => [name, (await s.get(`allergen/${week}/${slug(name)}`, { type: 'json' })) || []])
+  );
+  return Object.fromEntries(rows);
+}
+
+export function allergenSummary(settings, entries) {
+  const met = settings.allergens.filter((a) => (entries[a] || []).length >= settings.allergenTarget).length;
+  return `${met} of ${settings.allergens.length} allergens at ${settings.allergenTarget}+ this week`;
+}
+
+export const subId =(endpoint) => hash(endpoint).slice(0, 16);
 
 /** Send a payload to every subscribed phone (optionally skipping one). */
 export async function pushAll(payload, { except, only } = {}, s = store()) {

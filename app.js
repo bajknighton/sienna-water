@@ -59,6 +59,7 @@ async function start() {
   if (isIOS && !standalone && !LS.get('skipInstall')) return show('v-install');
   if (!LS.get('code') || !LS.get('name')) return showSetup();
   show('v-main');
+  showTab(tab);
   await refresh();
 }
 
@@ -99,6 +100,17 @@ $('#setupForm').onsubmit = async (e) => {
   }
 };
 
+// ---------- tabs ----------
+let tab = LS.get('tab') || 'today';
+function showTab(t) {
+  tab = t;
+  LS.set('tab', t);
+  for (const p of ['today', 'allergens', 'settings']) $('#tab-' + p).classList.toggle('hidden', p !== t);
+  document.querySelectorAll('#tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('#tabbar button').forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+
 // ---------- main view ----------
 async function refresh() {
   try {
@@ -107,71 +119,78 @@ async function refresh() {
     if (e.message !== 'unauthorised') toast("Couldn't reach the server – check your connection");
     return;
   }
+  // keep viewing an older allergen week if that's where we are
+  if (!allgView || allgView.week === state.allergens.week) allgView = state.allergens;
   render();
   syncPush();
 }
 
-function slotStatus(slot) {
-  if (slot.done) return 'done';
-  const diff = state.nowMin - toMin(slot.time);
+function statusAt(time, done, windowMin = 120) {
+  if (done) return 'done';
+  const diff = state.nowMin - toMin(time);
   if (diff < 0) return 'upcoming';
-  return diff <= 120 ? 'due' : 'missed';
+  return diff <= windowMin ? 'due' : 'missed';
 }
 
 function render() {
   const { settings } = state;
+  document.body.classList.add('has-tabs');
   document.querySelectorAll('.baby').forEach((el) => (el.textContent = settings.babyName));
   document.title = `${settings.babyName}'s Water`;
   $('#todayLabel').textContent = new Date(state.date + 'T12:00:00').toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
   $('#pausedBanner').classList.toggle('hidden', !settings.paused);
 
-  const slots = state.slots.map((s) => ({ ...s, status: slotStatus(s) }));
+  const slots = state.slots.map((s) => ({ ...s, status: statusAt(s.time, s.done) }));
   const doneCount = slots.filter((s) => s.status === 'done').length;
+  const vit = settings.vitamins.on ? { ...state.vit, time: settings.vitamins.time, status: statusAt(settings.vitamins.time, state.vit.done, 180) } : null;
+  // the evening check stays "due" until midnight
+  const allg = settings.allergenCheck.on ? { ...state.allg, time: settings.allergenCheck.time, status: statusAt(settings.allergenCheck.time, state.allg.done, 24 * 60) } : null;
 
   // big "due now" cards
-  const due = slots.filter((s) => s.status === 'due');
-  $('#dueArea').innerHTML = due.map((s) => `
+  const cards = slots.filter((s) => s.status === 'due').map((s) => `
     <div class="card due" id="due-${s.key}">
       <img src="/icons/icon-192.png" alt="">
       <div class="big" style="margin-top:12px">${pretty(s.time)}</div>
       <p class="who">Water time for ${esc(settings.babyName)}! 💧</p>
-      <button class="water" data-done="${s.time}">✓ Water's ready – Done</button>
-    </div>`).join('');
+      <button class="water" data-kind="water" data-time="${s.time}">✓ Water's ready – Done</button>
+    </div>`);
+  if (vit?.status === 'due') cards.unshift(`
+    <div class="card due" id="due-vit">
+      <div class="big" style="font-size:54px">💊</div>
+      <p class="who">Vitamin time for ${esc(settings.babyName)}!</p>
+      <button class="water" data-kind="vit">✓ Vitamins given – Done</button>
+    </div>`);
+  if (allg?.status === 'due') cards.push(`
+    <div class="card due-soft" style="text-align:center">
+      <div style="font-size:44px">🥚🥜🥛</div>
+      <p class="who" style="margin:6px 0 14px">Evening allergen check</p>
+      <p class="muted" style="margin-bottom:14px">Tick off anything ${esc(settings.babyName)} had today, then mark it done.</p>
+      <div class="row2"><button class="soft" data-goto="allergens">Open tracker</button><button data-kind="allg">✓ All logged</button></div>
+    </div>`);
+  $('#dueArea').innerHTML = cards.join('');
+  const anyDue = cards.length > 0;
 
-  // progress
-  $('#progressText').textContent = `${doneCount} of ${slots.length} today`;
+  // water progress
+  $('#progressText').textContent = `${doneCount} of ${slots.length} water today`;
   $('#drops').innerHTML = slots.map((s) => `
     <svg class="drop ${s.status === 'done' ? 'full' : ''}" viewBox="0 0 26 32"><path d="M13 2C17 8 24 15 24 21a11 11 0 0 1-22 0C2 15 9 8 13 2Z"/></svg>`).join('');
   const next = slots.find((s) => s.status === 'upcoming');
   $('#nextText').textContent = settings.paused ? 'Reminders paused'
-    : next ? `Next reminder at ${pretty(next.time)}`
-    : due.length ? 'One to do now ↑' : 'All done for today 🎉';
+    : next ? `Next water at ${pretty(next.time)}`
+    : slots.some((s) => s.status === 'due') ? 'One to do now ↑' : 'All water done for today 🎉';
 
-  // slot list
-  $('#slots').innerHTML = slots.length ? slots.map((s) => {
-    let right = '', state_ = '';
-    if (s.status === 'done') {
-      state_ = `Done by ${esc(s.done.by)} at ${clock(s.done.at)}`;
-      right = `<div class="tick">✓</div>`;
-    } else if (s.status === 'upcoming') {
-      state_ = 'Coming up';
-      right = `<button class="soft mini" data-done="${s.time}">Done early</button>`;
-    } else if (s.status === 'due') {
-      state_ = s.sent ? `Reminded ${s.sent.count} time${s.sent.count > 1 ? 's' : ''}` : 'Due now';
-      right = `<button class="water mini" data-done="${s.time}">Done</button>`;
-    } else {
-      state_ = 'Not ticked off';
-      right = `<button class="soft mini" data-done="${s.time}">Mark done</button>`;
-    }
-    const undo = s.status === 'done' ? ` · <button class="ghost small" style="padding:0;font-size:14px" data-undo="${s.time}">undo</button>` : '';
-    return `<div class="card slot is-${s.status}">
-      <div class="time">${pretty(s.time)}</div>
-      <div class="info"><div class="state">${state_}${undo}</div></div>
-      ${right}
-    </div>`;
-  }).join('') : '<div class="card muted">No reminder times yet – add some in Settings below.</div>';
+  // water list
+  $('#slots').innerHTML = slots.length ? slots.map((s) => rowHtml({ ...s, kind: 'water', label: pretty(s.time) })).join('')
+    : '<div class="card muted">No water times yet – add some in Settings.</div>';
 
-  // week
+  // extras
+  const extras = [];
+  if (vit) extras.push(rowHtml({ ...vit, kind: 'vit', label: '💊', sub: `Vitamins · ${pretty(vit.time)}` }));
+  if (allg) extras.push(rowHtml({ ...allg, kind: 'allg', label: '🥚', sub: `Allergen check · ${pretty(allg.time)}` }));
+  $('#extrasWrap').classList.toggle('hidden', !extras.length);
+  $('#extras').innerHTML = extras.join('');
+
+  // week bars (water)
   const total = Math.max(slots.length, 1);
   $('#week').innerHTML = state.week.map((w) => {
     const pct = Math.min(100, Math.round((w.done / total) * 100));
@@ -187,6 +206,9 @@ function render() {
   });
   $('#schedTimes').textContent = settings.times.map(pretty).join(' · ');
 
+  // allergens
+  renderAllergens(allg);
+
   // settings (don't overwrite while the user is editing)
   if (!formDirty && !$('#settingsForm').contains(document.activeElement)) fillSettings();
 
@@ -194,41 +216,162 @@ function render() {
   const mine = LS.get('deviceId');
   $('#devices').innerHTML = state.devices.length ? state.devices.map((d) => `
     <div class="device"><span>📱 ${esc(d.name)}</span><span class="muted small">${d.id === mine ? 'This phone' : ''}</span></div>`).join('')
-    : '<p class="muted">No phones yet – tap "Turn on reminders" above.</p>';
+    : '<p class="muted">No phones yet – tap "Turn on reminders".</p>';
 
-  // opened from a notification? scroll to that card
-  const want = new URLSearchParams(location.search).get('due');
-  if (want && $('#due-' + want)) { $('#due-' + want).scrollIntoView({ behavior: 'smooth', block: 'center' }); history.replaceState(null, '', '/'); }
+  // opened from a notification?
+  const q = new URLSearchParams(location.search);
+  if (q.get('tab')) showTab(q.get('tab'));
+  if (q.get('due')) { showTab('today'); setTimeout(() => $('#due-' + q.get('due'))?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); }
+  if (location.search) history.replaceState(null, '', '/');
 
   // clear the red badge on the icon if nothing is waiting
-  if (!due.length && navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+  if (!anyDue && navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
 }
 
+// One row in the Today lists (water slot, vitamins or allergen check)
+function rowHtml(r) {
+  const attrs = `data-kind="${r.kind}"${r.time && r.kind === 'water' ? ` data-time="${r.time}"` : ''}`;
+  let right = '', text = '';
+  if (r.status === 'done') {
+    text = `Done by ${esc(r.done.by)} at ${clock(r.done.at)}`;
+    right = `<div class="tick">✓</div>`;
+  } else if (r.status === 'upcoming') {
+    text = 'Coming up';
+    right = r.kind === 'allg' ? `<button class="soft mini" data-goto="allergens">Open</button>`
+      : `<button class="soft mini" ${attrs}>Done early</button>`;
+  } else if (r.status === 'due') {
+    text = r.sent ? `Reminded ${r.sent.count} time${r.sent.count > 1 ? 's' : ''}` : 'Due now';
+    right = `<button class="water mini" ${attrs}>Done</button>`;
+  } else {
+    text = 'Not ticked off';
+    right = `<button class="soft mini" ${attrs}>Mark done</button>`;
+  }
+  const undo = r.status === 'done' ? ` · <button class="ghost small" style="padding:0;font-size:14px" data-undo ${attrs}>undo</button>` : '';
+  return `<div class="card slot is-${r.status}">
+    <div class="time">${r.label}</div>
+    <div class="info">${r.sub ? `<div><b>${r.sub}</b></div>` : ''}<div class="state">${text}${undo}</div></div>
+    ${right}
+  </div>`;
+}
+
+const DONE_TOAST = {
+  water: (n) => `🦁 Thanks! ${n}'s water is ticked off`,
+  vit: (n) => `💊 ${n}'s vitamins are ticked off`,
+  allg: () => `🥚 Today's allergens are logged`,
+};
+
 document.addEventListener('click', async (e) => {
-  const d = e.target.closest('[data-done]');
-  const u = e.target.closest('[data-undo]');
-  if (d && !sending) {
-    sending = true;
-    d.disabled = true;
-    try {
-      await api('done', { method: 'POST', body: { time: d.dataset.done, by: LS.get('name'), deviceId: LS.get('deviceId') } });
+  const go = e.target.closest('[data-goto]');
+  if (go) return showTab(go.dataset.goto);
+  const el = e.target.closest('[data-kind]');
+  if (!el || el.closest('#tabbar') || sending) return;
+  const body = { kind: el.dataset.kind, time: el.dataset.time, by: LS.get('name'), deviceId: LS.get('deviceId') };
+  sending = true;
+  el.disabled = true;
+  try {
+    if (el.hasAttribute('data-undo')) {
+      await api('undo', { method: 'POST', body });
+    } else {
+      await api('done', { method: 'POST', body });
       if (navigator.vibrate) navigator.vibrate(30);
-      toast(`🦁 Thanks! ${state.settings.babyName}'s water is ticked off`);
-      await refresh();
-    } catch (x) { toast(x.message); d.disabled = false; }
-    sending = false;
-  }
-  if (u) {
-    await api('undo', { method: 'POST', body: { time: u.dataset.undo } }).catch((x) => toast(x.message));
-    refresh();
-  }
+      toast(DONE_TOAST[body.kind](state.settings.babyName));
+    }
+    await refresh();
+  } catch (x) { toast(x.message); el.disabled = false; }
+  sending = false;
 });
+
+// ---------- allergens ----------
+let allgView = null;
+let allgBusy = false;
+const dayShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'short' }).slice(0, 3);
+const addDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+
+function renderAllergens(allg) {
+  const { settings } = state;
+  const target = settings.allergenTarget;
+  const view = allgView;
+  const isThisWeek = view.week === state.allergens.week;
+  const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString([], { day: 'numeric', month: 'short' });
+  $('#weekLabel').textContent = isThisWeek ? 'This week' : view.week === addDays(state.allergens.week, -7) ? 'Last week' : `Week of ${fmt(view.week)}`;
+  const met = settings.allergens.filter((a) => (view.entries[a] || []).length >= target).length;
+  $('#weekSub').textContent = `${fmt(view.week)} – ${fmt(addDays(view.week, 6))} · ${met} of ${settings.allergens.length} at ${target}+`;
+  $('#ameterFill').style.width = `${settings.allergens.length ? (met / settings.allergens.length) * 100 : 0}%`;
+  $('#weekNext').disabled = isThisWeek;
+
+  $('#allgTable').innerHTML = settings.allergens.length ? settings.allergens.map((name) => {
+    const list = view.entries[name] || [];
+    const n = Math.max(target, list.length);
+    let boxes = '';
+    for (let i = 0; i < n; i++) {
+      const en = list[i];
+      boxes += en
+        ? `<button type="button" class="box on ${en.date === state.date ? 'today' : ''}" data-allg="${esc(name)}" data-rm="${i}" aria-label="Remove ${esc(name)} tick">${en.date ? dayShort(en.date) : '<span class="ck">✓</span>'}</button>`
+        : `<button type="button" class="box" data-allg="${esc(name)}" aria-label="Tick ${esc(name)}"></button>`;
+    }
+    if (list.length >= target) boxes += `<button type="button" class="box more" data-allg="${esc(name)}" aria-label="Add another ${esc(name)}">+</button>`;
+    const done = list.length >= target;
+    return `<div class="arow ${done ? 'met' : ''}">
+      <div class="aname">${esc(name)}<span class="cnt">${done ? `✓ ${list.length} this week` : `${list.length} of ${target}`}</span></div>
+      <div class="boxes">${boxes}</div>
+    </div>`;
+  }).join('') : '<p class="muted">No allergens yet – add some in Settings.</p>';
+
+  // evening check banner (only on this week)
+  const showBanner = isThisWeek && allg && allg.status !== 'upcoming';
+  $('#allgBanner').classList.toggle('hidden', !showBanner);
+  if (showBanner) {
+    const todayCount = settings.allergens.reduce((t, a) => t + (view.entries[a] || []).filter((e) => e.date === state.date).length, 0);
+    $('#allgBanner').innerHTML = allg.done
+      ? `<b>✓ Today's allergens logged</b><p class="muted small">By ${esc(allg.done.by)} at ${clock(allg.done.at)} · ${todayCount} tick${todayCount === 1 ? '' : 's'} today
+         · <button class="ghost small" style="padding:0;font-size:14px" data-undo data-kind="allg">undo</button></p>`
+      : `<b>Evening check</b><p class="muted" style="margin:4px 0 12px">Tick anything ${esc(settings.babyName)} had today (${todayCount} so far), then let the other phone know you're done.</p>
+         <button data-kind="allg">✓ Today's allergens are logged</button>`;
+  }
+  $('#allgDot').classList.toggle('hidden', !(allg && allg.status === 'due'));
+}
+
+$('#allgTable').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-allg]');
+  if (!b || allgBusy) return;
+  allgBusy = true;
+  b.disabled = true;
+  const remove = b.dataset.rm != null;
+  try {
+    const r = await api('allergen', {
+      method: 'POST',
+      body: { name: b.dataset.allg, week: allgView.week, action: remove ? 'remove' : 'add', index: remove ? Number(b.dataset.rm) : undefined, by: LS.get('name') },
+    });
+    allgView = { week: r.week, entries: r.entries };
+    if (r.week === state.allergens.week) state.allergens = allgView;
+    if (!remove && navigator.vibrate) navigator.vibrate(20);
+    renderAllergens(state.settings.allergenCheck.on ? { ...state.allg, time: state.settings.allergenCheck.time, status: statusAt(state.settings.allergenCheck.time, state.allg.done, 24 * 60) } : null);
+  } catch (x) { toast(x.message); }
+  allgBusy = false;
+});
+
+async function loadWeek(week) {
+  try {
+    allgView = await api('allergens?week=' + week);
+    render();
+  } catch (x) { toast(x.message); }
+}
+$('#weekPrev').onclick = () => loadWeek(addDays(allgView.week, -7));
+$('#weekNext').onclick = () => loadWeek(addDays(allgView.week, 7));
 
 // ---------- settings ----------
 function timeRow(value = '') {
   const row = document.createElement('div');
   row.className = 'timerow';
   row.innerHTML = `<input type="time" value="${value}" required><button type="button" class="x" aria-label="Remove">×</button>`;
+  row.querySelector('.x').onclick = () => row.remove();
+  return row;
+}
+function allgRow(value = '') {
+  const row = document.createElement('div');
+  row.className = 'timerow xrow';
+  row.innerHTML = `<input type="text" maxlength="30" placeholder="e.g. Kiwi"><button type="button" class="x" aria-label="Remove">×</button>`;
+  row.querySelector('input').value = value;
   row.querySelector('.x').onclick = () => row.remove();
   return row;
 }
@@ -244,15 +387,22 @@ function showEditTab(k) {
   $('#timeRows').replaceChildren(...draft[k].map((t) => timeRow(t)));
   $('#editNote').textContent = k === state.settings.active
     ? `Schedule ${k} is the one in use today.`
-    : `Editing Schedule ${k} – switch to it at the top when you need it.`;
+    : `Editing Schedule ${k} – switch to it on the Today tab when you need it.`;
 }
 function fillSettings() {
   const s = state.settings;
   $('#babyIn').value = s.babyName;
   draft = { 1: [...s.schedules['1']], 2: [...s.schedules['2']] };
   showEditTab(formDirty ? editing : s.active);
+  $('#vitOn').checked = s.vitamins.on;
+  $('#vitTime').value = s.vitamins.time;
+  $('#allgOn').checked = s.allergenCheck.on;
+  $('#allgTime').value = s.allergenCheck.time;
+  $('#targetIn').value = String(s.allergenTarget);
+  $('#allgRows').replaceChildren(...s.allergens.map((a) => allgRow(a)));
   $('#nagIn').value = String(s.nagMinutes);
   $('#maxIn').value = String(s.maxNags);
+  $('#maxIn').disabled = s.nagMinutes === 0;
   $('#notifyDoneIn').checked = s.notifyOnDone;
   $('#pausedIn').checked = s.paused;
   formDirty = false;
@@ -262,9 +412,9 @@ document.querySelectorAll('#editSwitch button').forEach((b) => (b.onclick = () =
   showEditTab(b.dataset.edit);
 }));
 $('#settingsForm').addEventListener('input', () => (formDirty = true));
-$('#settingsForm').addEventListener('click', (e) => { if (e.target.closest('.x, #addTime, #editSwitch')) formDirty = true; });
+$('#settingsForm').addEventListener('click', (e) => { if (e.target.closest('.x, #addTime, #addAllg, #editSwitch')) formDirty = true; });
 
-// The big switch at the top
+// The big switch on the Today tab
 document.querySelectorAll('#schedSwitch button').forEach((b) => (b.onclick = async () => {
   const k = b.dataset.sched;
   if (!state || k === state.settings.active) return;
@@ -282,6 +432,11 @@ $('#addTime').onclick = () => {
   $('#timeRows').append(r);
   r.querySelector('input').focus();
 };
+$('#addAllg').onclick = () => {
+  const r = allgRow('');
+  $('#allgRows').append(r);
+  r.querySelector('input').focus();
+};
 $('#settingsForm').onsubmit = async (e) => {
   e.preventDefault();
   draft[editing] = rowTimes();
@@ -292,6 +447,10 @@ $('#settingsForm').onsubmit = async (e) => {
       body: {
         babyName: $('#babyIn').value,
         schedules: draft,
+        vitamins: { on: $('#vitOn').checked, time: $('#vitTime').value },
+        allergenCheck: { on: $('#allgOn').checked, time: $('#allgTime').value },
+        allergenTarget: Number($('#targetIn').value),
+        allergens: [...$('#allgRows').querySelectorAll('input')].map((i) => i.value.trim()).filter(Boolean),
         nagMinutes: Number($('#nagIn').value),
         maxNags: Number($('#maxIn').value),
         notifyOnDone: $('#notifyDoneIn').checked,
@@ -299,8 +458,9 @@ $('#settingsForm').onsubmit = async (e) => {
       },
     });
     document.activeElement?.blur();
-    toast('Saved – both phones will use these times');
+    toast('Saved – both phones will use these settings');
     formDirty = false;
+    allgView = null;
     await refresh();
     fillSettings();
   } catch (x) { toast(x.message); }
