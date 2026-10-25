@@ -164,8 +164,9 @@ function render() {
     <div class="card due-soft" style="text-align:center">
       <div style="font-size:44px">🥚🥜🥛</div>
       <p class="who" style="margin:6px 0 14px">Evening allergen check</p>
-      <p class="muted" style="margin-bottom:14px">Tick off anything ${esc(settings.babyName)} had today, then mark it done.</p>
-      <div class="row2"><button class="soft" data-goto="allergens">Open tracker</button><button data-kind="allg">✓ All logged</button></div>
+      <p class="muted" style="margin-bottom:6px">${todaySoFar()}</p>
+      <p class="muted small" style="margin-bottom:14px">Tick off anything ${esc(settings.babyName)} had in the tracker, then mark today as done.</p>
+      <div class="row2"><button class="soft" data-goto="allergens">Open tracker</button><button data-kind="allg">✓ Mark today done</button></div>
     </div>`);
   $('#dueArea').innerHTML = cards.join('');
   const anyDue = cards.length > 0;
@@ -177,7 +178,9 @@ function render() {
   const next = slots.find((s) => s.status === 'upcoming');
   $('#nextText').textContent = settings.paused ? 'Reminders paused'
     : next ? `Next water at ${pretty(next.time)}`
-    : slots.some((s) => s.status === 'due') ? 'One to do now ↑' : 'All water done for today 🎉';
+    : slots.some((s) => s.status === 'due') ? 'One to do now ↑'
+    : doneCount === slots.length ? 'All water done for today 🎉'
+    : `${slots.length - doneCount} not ticked off today`;
 
   // water list
   $('#slots').innerHTML = slots.length ? slots.map((s) => rowHtml({ ...s, kind: 'water', label: pretty(s.time) })).join('')
@@ -237,8 +240,7 @@ function rowHtml(r) {
     right = `<div class="tick">✓</div>`;
   } else if (r.status === 'upcoming') {
     text = 'Coming up';
-    right = r.kind === 'allg' ? `<button class="soft mini" data-goto="allergens">Open</button>`
-      : `<button class="soft mini" ${attrs}>Done early</button>`;
+    right = `<button class="soft mini" ${attrs}>Done early</button>`;
   } else if (r.status === 'due') {
     text = r.sent ? `Reminded ${r.sent.count} time${r.sent.count > 1 ? 's' : ''}` : 'Due now';
     right = `<button class="water mini" ${attrs}>Done</button>`;
@@ -257,7 +259,7 @@ function rowHtml(r) {
 const DONE_TOAST = {
   water: (n) => `🦁 Thanks! ${n}'s water is ticked off`,
   vit: (n) => `💊 ${n}'s vitamins are ticked off`,
-  allg: () => `🥚 Today's allergens are logged`,
+  allg: () => `🥚 Today's allergen check is done`,
 };
 
 document.addEventListener('click', async (e) => {
@@ -286,6 +288,13 @@ let allgView = null;
 let allgBusy = false;
 const dayShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'short' }).slice(0, 3);
 const addDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+
+// e.g. "Ticked today: Egg, Peanut" or "Nothing ticked off yet today"
+function todaySoFar() {
+  const entries = state.allergens.entries;
+  const names = state.settings.allergens.filter((a) => (entries[a] || []).some((e) => e.date === state.date));
+  return names.length ? `Ticked today: ${names.map(esc).join(', ')}` : 'Nothing ticked off yet today';
+}
 
 function renderAllergens(allg) {
   const { settings } = state;
@@ -318,15 +327,18 @@ function renderAllergens(allg) {
   }).join('') : '<p class="muted">No allergens yet – add some in Settings.</p>';
 
   // evening check banner (only on this week)
-  const showBanner = isThisWeek && allg && allg.status !== 'upcoming';
+  const showBanner = isThisWeek && !!allg;
   $('#allgBanner').classList.toggle('hidden', !showBanner);
   if (showBanner) {
-    const todayCount = settings.allergens.reduce((t, a) => t + (view.entries[a] || []).filter((e) => e.date === state.date).length, 0);
+    const lead = allg.status === 'upcoming'
+      ? `Finished for today? Mark it done now and the ${pretty(allg.time)} reminder won't go off.`
+      : `Tick anything ${esc(settings.babyName)} had today, then mark today as done so the other phone knows.`;
     $('#allgBanner').innerHTML = allg.done
-      ? `<b>✓ Today's allergens logged</b><p class="muted small">By ${esc(allg.done.by)} at ${clock(allg.done.at)} · ${todayCount} tick${todayCount === 1 ? '' : 's'} today
+      ? `<b>✓ Today marked as done</b><p class="muted small">By ${esc(allg.done.by)} at ${clock(allg.done.at)} · ${todaySoFar()}
          · <button class="ghost small" style="padding:0;font-size:14px" data-undo data-kind="allg">undo</button></p>`
-      : `<b>Evening check</b><p class="muted" style="margin:4px 0 12px">Tick anything ${esc(settings.babyName)} had today (${todayCount} so far), then let the other phone know you're done.</p>
-         <button data-kind="allg">✓ Today's allergens are logged</button>`;
+      : `<b>Evening check · ${pretty(allg.time)}</b><p style="margin:4px 0 2px">${todaySoFar()}</p>
+         <p class="muted small" style="margin-bottom:12px">${lead}</p>
+         <button data-kind="allg">✓ Mark today done</button>`;
   }
   $('#allgDot').classList.toggle('hidden', !(allg && allg.status === 'due'));
 }
