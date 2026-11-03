@@ -343,24 +343,92 @@ function renderAllergens(allg) {
   $('#allgDot').classList.toggle('hidden', !(allg && allg.status === 'due'));
 }
 
-$('#allgTable').addEventListener('click', async (e) => {
-  const b = e.target.closest('[data-allg]');
-  if (!b || allgBusy) return;
+async function sendAllergen(body) {
+  if (allgBusy) return;
   allgBusy = true;
-  b.disabled = true;
-  const remove = b.dataset.rm != null;
   try {
-    const r = await api('allergen', {
-      method: 'POST',
-      body: { name: b.dataset.allg, week: allgView.week, action: remove ? 'remove' : 'add', index: remove ? Number(b.dataset.rm) : undefined, by: LS.get('name') },
-    });
+    const r = await api('allergen', { method: 'POST', body: { week: allgView.week, by: LS.get('name'), ...body } });
     allgView = { week: r.week, entries: r.entries };
     if (r.week === state.allergens.week) state.allergens = allgView;
-    if (!remove && navigator.vibrate) navigator.vibrate(20);
+    if (body.action !== 'remove' && navigator.vibrate) navigator.vibrate(20);
     renderAllergens(state.settings.allergenCheck.on ? { ...state.allg, time: state.settings.allergenCheck.time, status: statusAt(state.settings.allergenCheck.time, state.allg.done, 24 * 60) } : null);
   } catch (x) { toast(x.message); }
   allgBusy = false;
+}
+
+// Tap = tick for today (or untick). Press and hold = pick the day.
+let holdTimer = null, held = false, holdStart = null;
+const tbl = $('#allgTable');
+tbl.addEventListener('pointerdown', (e) => {
+  const b = e.target.closest('[data-allg]');
+  if (!b) return;
+  held = false;
+  holdStart = { x: e.clientX, y: e.clientY };
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => {
+    held = true;
+    if (navigator.vibrate) navigator.vibrate(15);
+    openDaySheet(b.dataset.allg, b.dataset.rm != null ? Number(b.dataset.rm) : null);
+  }, 450);
 });
+const cancelHold = () => clearTimeout(holdTimer);
+tbl.addEventListener('pointerup', cancelHold);
+tbl.addEventListener('pointercancel', cancelHold);
+tbl.addEventListener('pointerleave', cancelHold);
+tbl.addEventListener('pointermove', (e) => {
+  if (holdStart && Math.hypot(e.clientX - holdStart.x, e.clientY - holdStart.y) > 10) cancelHold(); // scrolling
+});
+tbl.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-allg]')) e.preventDefault(); });
+tbl.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-allg]');
+  if (!b) return;
+  if (held) { held = false; return; } // the long press already opened the picker
+  const remove = b.dataset.rm != null;
+  sendAllergen({ name: b.dataset.allg, action: remove ? 'remove' : 'add', index: remove ? Number(b.dataset.rm) : undefined });
+});
+
+// ---------- day picker ----------
+let sheetCtx = null;
+function openDaySheet(name, index) {
+  const entry = index != null ? (allgView.entries[name] || [])[index] : null;
+  sheetCtx = { name, index };
+  $('#sheetTitle').textContent = entry ? `${name} – change the day` : `${name} – which day?`;
+  $('#sheetSub').textContent = entry
+    ? (entry.date ? `Currently ${new Date(entry.date + 'T12:00:00').toLocaleDateString([], { weekday: 'long' })}` : 'No day set yet')
+    : `Log ${name} on an earlier day this week`;
+  const days = [...Array(7)].map((_, i) => addDays(allgView.week, i));
+  $('#dayGrid').innerHTML = days.map((d) => {
+    const dt = new Date(d + 'T12:00:00');
+    const future = d > state.date;
+    const on = entry && entry.date === d;
+    return `<button type="button" class="daybtn ${on ? 'on' : ''}" data-day="${d}" ${future ? 'disabled' : ''}>
+      <span>${d === state.date ? 'Today' : dt.toLocaleDateString([], { weekday: 'short' })}</span><b>${dt.getDate()}</b></button>`;
+  }).join('');
+  $('#sheetRemove').classList.toggle('hidden', !entry);
+  $('#sheetBack').classList.remove('hidden');
+  requestAnimationFrame(() => $('#sheetBack').classList.add('open'));
+}
+function closeSheet() {
+  $('#sheetBack').classList.remove('open');
+  setTimeout(() => $('#sheetBack').classList.add('hidden'), 200);
+  sheetCtx = null;
+}
+$('#dayGrid').addEventListener('click', async (e) => {
+  const d = e.target.closest('[data-day]');
+  if (!d || !sheetCtx) return;
+  const { name, index } = sheetCtx;
+  closeSheet();
+  await sendAllergen(index != null ? { name, action: 'move', index, date: d.dataset.day } : { name, action: 'add', date: d.dataset.day });
+  toast(`${name} logged for ${d.dataset.day === state.date ? 'today' : new Date(d.dataset.day + 'T12:00:00').toLocaleDateString([], { weekday: 'long' })}`);
+});
+$('#sheetRemove').onclick = async () => {
+  if (!sheetCtx) return;
+  const { name, index } = sheetCtx;
+  closeSheet();
+  await sendAllergen({ name, action: 'remove', index });
+};
+$('#sheetCancel').onclick = closeSheet;
+$('#sheetBack').addEventListener('click', (e) => { if (e.target.id === 'sheetBack') closeSheet(); });
 
 async function loadWeek(week) {
   try {

@@ -80,19 +80,27 @@ export default async (req) => {
   }
 
   if (route === 'allergen' && req.method === 'POST') {
-    // { name, week, action: 'add' | 'remove', index }
+    // { name, week, action: 'add' | 'remove' | 'move', index, date }
     if (!settings.allergens.includes(body.name)) return json({ error: 'unknown allergen' }, 400);
     const week = weekStart(isDate(body.week) ? body.week : date);
     if (week > weekStart(date)) return json({ error: "can't log future weeks" }, 400);
+    // A chosen day must be inside this week and not in the future.
+    const day = isDate(body.date) && weekStart(body.date) === week && body.date <= date ? body.date : undefined;
+    if (body.date && !day) return json({ error: 'Pick a day in this week, up to today' }, 400);
     const key = `allergen/${week}/${slug(body.name)}`;
     const list = (await s.get(key, { type: 'json' })) || [];
+    const i = Number.isInteger(body.index) ? body.index : list.length - 1;
     if (body.action === 'add') {
-      // Ticks in the current week are dated today; older weeks just count.
-      list.push({ date: week === weekStart(date) ? date : null, by: String(body.by || '').slice(0, 30), at: Date.now() });
+      // Default: today for the current week; older weeks just count unless a day is picked.
+      list.push({ date: day || (week === weekStart(date) ? date : null), by: String(body.by || '').slice(0, 30), at: Date.now() });
     } else if (body.action === 'remove') {
-      const i = Number.isInteger(body.index) ? body.index : list.length - 1;
       if (i >= 0 && i < list.length) list.splice(i, 1);
+    } else if (body.action === 'move') {
+      if (!day) return json({ error: 'missing day' }, 400);
+      if (i >= 0 && i < list.length) list[i] = { ...list[i], date: day };
     }
+    // Keep ticks in day order (undated ones last).
+    list.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || a.at - b.at);
     if (list.length) await s.setJSON(key, list.slice(0, 21)); else await s.delete(key);
     return json({ ok: true, week, entries: await allergenWeek(settings, week, s) });
   }

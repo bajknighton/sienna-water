@@ -165,6 +165,20 @@
     .box .ck { font-size: 16px; line-height: 1; }
     .due-soft { border: 2px solid var(--lion); background: linear-gradient(160deg, var(--lion-soft), var(--card)); }
     .xrow input { flex: 1; }
+
+    .box { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+    .sheet-back { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0); transition: background .2s; display: flex; align-items: flex-end; justify-content: center; }
+    .sheet-back.open { background: rgba(0,0,0,.4); }
+    .sheet { background: var(--card); width: 100%; max-width: 560px; border-radius: 26px 26px 0 0; padding: 10px 18px calc(env(safe-area-inset-bottom) + 14px);
+             transform: translateY(100%); transition: transform .22s ease; }
+    .sheet-back.open .sheet { transform: none; }
+    .grab { width: 40px; height: 5px; border-radius: 99px; background: var(--line); margin: 0 auto 12px; }
+    .daygrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 16px; }
+    .daybtn { padding: 10px 0; border-radius: 14px; background: var(--lion-soft); color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .daybtn span { font-size: 12px; font-weight: 700; }
+    .daybtn b { font-size: 20px; }
+    .daybtn.on { background: var(--good); color: #fff; }
+    .daybtn:disabled { opacity: .3; }
     .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
     .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
     .steps li::before { content: counter(s); flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lion); color: #fff; font-weight: 800; display: grid; place-items: center; }
@@ -294,7 +308,8 @@
         <div id="allgTable" class="atable"></div>
       </div>
       <p class="muted small" style="text-align:center;margin:14px 8px 0">
-        Tap an empty box each time <span class="baby">Sienna</span> has that allergen. Tap a ticked box to remove it.
+        Tap an empty box each time <span class="baby">Sienna</span> has that allergen (it's logged for today).
+        <b>Press and hold</b> a box to pick a different day, or to move a tick. Tap a ticked box to remove it.
         Weeks run Monday to Sunday.
       </p>
     </div>
@@ -418,6 +433,17 @@
       <button type="button" data-tab="settings"><span class="ti">⚙️</span>Settings</button>
     </nav>
   </section>
+
+  <div class="sheet-back hidden" id="sheetBack">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="grab"></div>
+      <h2 id="sheetTitle">Which day?</h2>
+      <p class="muted small" id="sheetSub" style="margin-top:4px"></p>
+      <div class="daygrid" id="dayGrid"></div>
+      <button type="button" class="soft" id="sheetRemove" style="margin-top:12px">Remove this tick</button>
+      <button type="button" class="ghost" id="sheetCancel" style="width:100%;margin-top:4px">Cancel</button>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
   <script src="/app.js"></script>
